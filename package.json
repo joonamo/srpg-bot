@@ -8,7 +8,7 @@
     "wrangler": "3.1.0"
   },
   "scripts": {
-    "start": "wrangler dev --env dev",
+    "start": " wrangler dev --env dev --remote",
     "deploy-dev": "wrangler publish --env dev",
     "deploy-prod": "wrangler publish --env prod",
     "deploy-all": "wrangler publish --env dev && wrangler publish --env prod"

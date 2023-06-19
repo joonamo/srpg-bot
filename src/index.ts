@@ -1,93 +1,70 @@
-/**
- * Welcome to Cloudflare Workers! This is your first scheduled worker.
- *
- * - Run `wrangler dev --local` in your terminal to start a development server
- * - Run `curl "http://localhost:8787/cdn-cgi/mf/scheduled"` to trigger the scheduled event
- * - Go back to the console to see what your worker has logged
- * - Update the Cron trigger in wrangler.toml (see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers)
- * - Run `wrangler publish --name my-worker` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/runtime-apis/scheduled-event/
- */
-
 import { splitEvery } from 'ramda'
 
 export interface Env {
-  players?: string[]
   apiKey: string
   webhook: string
   customEmoji?: { up?: string; down?: string; new?: string }
   messageTitle?: string
+  ignorePlayers: string[]
+  regions: string[]
 
   scoreHistory: KVNamespace
 }
 
-const listApi = 'https://itl2023.groovestats.com/api/entrant/leaderboard'
+const listApi =
+  'https://srpg7.groovestats.com/api/get-ranking.php?type=tplp&gender=all&superregion=all&country=all'
 const scoreKey = 'last-scores'
-const playersByGroupKey = 'players-by-group'
 
 const medals: string[] = ['0', '🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
 const doIt = async (env: Env) => {
-  const [lastScoreData, playersByGroupData] = await Promise.all([
-    env.scoreHistory.get(scoreKey),
-    env.scoreHistory.get(playersByGroupKey),
-  ])
+  const lastScoreData = await env.scoreHistory.get(scoreKey)
 
-  const playersByGroup: { group: string; emoji: string; players: string[] }[] | null =
-    playersByGroupData && JSON.parse(playersByGroupData)
+  const lastScores: RankedPlayer[] = (lastScoreData && JSON.parse(lastScoreData ?? '')) ?? []
 
-  const players = playersByGroup
-    ? playersByGroup.flatMap((group) =>
-        group.players.map((player) => ({
-          name: player.toLocaleLowerCase(),
-          emoji: group.emoji,
-          group: group.group,
-        }))
-      )
-    : env.players
-    ? env.players.map((name) => ({ name: name.toLocaleLowerCase(), emoji: '', group: '' }))
-    : []
-  const lastScores: InterestingPlayerData[] = (lastScoreData && JSON.parse(lastScoreData ?? '')) ?? []
-
-  console.log('Calling ITL API')
+  console.log('Calling SRPG API')
   const data = await fetch(listApi)
   console.log(`Api call succesful: ${data.ok}, status: ${data.status}`)
   const leaderboardData = await data.json<LeaderboardResponse>()
-  console.log(
-    `Leaderboard data succesful: ${leaderboardData.success}, message: ${leaderboardData.message}`
-  )
+  console.log(`Leaderboard data loaded. Records: ${leaderboardData.records}`)
+
+  const players = leaderboardData.data
+    .map<Player>((rawPlayer) => ({
+      id: rawPlayer[8],
+      name: rawPlayer[1],
+      region: rawPlayer[4],
+      score: parseInt(rawPlayer[5], 10),
+    }))
+    .sort((a, b) => b.score - a.score)
 
   let localPlacement = 1
-  const interestingPlayers = leaderboardData.data.leaderboard.flatMap<InterestingPlayerData>(
-    (player, index) => {
-      const compareName = player.name.toLocaleLowerCase()
-      const basePlayer = players.find((p) => p.name === compareName)
-      return basePlayer
-        ? [
-            {
-              ...player,
-              emoji: basePlayer.emoji,
-              placement: index + 1,
-              localPlacement: localPlacement++,
-            },
-          ]
-        : []
-    }
-  )
+  const interestingPlayers = players.flatMap<RankedPlayer>((player, index) => {
+    if (
+      env.ignorePlayers.includes(player.name.toLocaleLowerCase()) ||
+      !env.regions.includes(player.region.toLocaleLowerCase())
+    )
+      return []
+
+    return [
+      {
+        ...player,
+        worldRank: index + 1,
+        localRank: localPlacement++,
+      },
+    ]
+  })
 
   await env.scoreHistory.put(scoreKey, JSON.stringify(interestingPlayers))
 
   const outputLines: string[] = []
-  let idx = 1
 
-  const scorePadding = interestingPlayers[interestingPlayers.length - 1].placement.toString().length
+  const scorePadding = interestingPlayers[interestingPlayers.length - 1].worldRank.toString().length
 
   for (const player of interestingPlayers) {
-    const lastScore: InterestingPlayerData | undefined = lastScores.find(
-      (lastScore) => lastScore.name === player.name
+    const lastScore: RankedPlayer | undefined = lastScores.find(
+      (lastScore) => lastScore.id === player.id
     )
-    const localPlacementDiff = lastScore && lastScore.localPlacement - player.localPlacement
+    const localPlacementDiff = lastScore && lastScore.localRank - player.localRank
     const changeLabel =
       localPlacementDiff === undefined
         ? env.customEmoji?.new ?? '🆕'
@@ -97,27 +74,23 @@ const doIt = async (env: Env) => {
         ? env.customEmoji?.down ?? '🔻'
         : '`--`'
 
-    const rpDiff = player.rankingPoints - (lastScore?.rankingPoints ?? 0)
+    const rpDiff = player.score - (lastScore?.score ?? 0)
     const rpDiffString =
       rpDiff > 0 && localPlacementDiff !== undefined
         ? `(${env.customEmoji?.up ?? '🔼'} +*${rpDiff.toLocaleString('fi')}*)`
         : ''
 
     outputLines.push(
-      `${medals[idx] ?? `\`${idx}\``} \`#${player.placement
+      `${medals[player.localRank] ?? `\`${player.localRank}\``} \`#${player.worldRank
         .toString()
-        .padEnd(scorePadding)}\` ${changeLabel} **${player.name}** ${
-        player.emoji
-      } - ${player.rankingPoints.toLocaleString('fi')} ${rpDiffString}`
+        .padEnd(scorePadding)}\` ${changeLabel} **${player.name}** - ${player.score.toLocaleString('fi')} ${rpDiffString}`
     )
-    idx++
   }
 
   console.log('Sending title...')
-
   const webhookResult = await fetch(env.webhook, {
     method: 'POST',
-    body: JSON.stringify({ content: env.messageTitle ?? '💃 Latest ITL 2023 scores 🕺' }),
+    body: JSON.stringify({ content: env.messageTitle ?? '🛡️ SRPG VII scores ⚔️' }),
     headers: { 'content-type': 'application/json;charset=UTF-8' },
   })
   console.log(`Webhook call succesful: ${webhookResult.ok}, status: ${webhookResult.status}`)

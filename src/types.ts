@@ -1,44 +1,31 @@
-type PlayerData = {
-  id: number
-  membersId: number
-  // ISO Timestamp
-  dateAdded: string
-  // ISO Timestamp
-  lastUpdated: string
-  status: number
-  totalPoints: number
-  rankingPoints: number
-  totalPass: number
-  totalFc: number
-  totalFec: number
-  totalQuad: number
-  totalQuint: number
-  crossoverLevel: number
-  bracketLevel: number
-  footswitchLevel: number
-  jackLevel: number
-  sideswitchLevel: number
-  doublestepLevel: number
-  staminaLevel: number
-  isBuddy: boolean
-  // Actually JSON
-  preferences: string
+/* 
+ Reverse-engineered raw player data, all are strings:
+ 0 unknown
+ 1 name
+ 2 gender
+ 3 super region
+ 4 region/country
+ 5 score (for example level or TP/LP)
+ 6 sub score (for example exp)
+ 7 unknown
+ 8 id
+ */
+
+type Player = {
+  id: string
   name: string
-  sex: string
-  profileImg: string
+  score: number
+  region: string
 }
 
-type InterestingPlayerData = PlayerData & {
-  placement: number
-  localPlacement: number
-  emoji: string
+type RankedPlayer = Player & {
+  worldRank: number
+  localRank: number
 }
 
 type LeaderboardResponse = {
-  success: boolean
-  message: string
-  data: {
-    leaderboard: PlayerData[]
-    rivalMembersIds: []
-  }
+  draw: number // Seems to be always 9
+  records: number,
+  recordsFiltered: number,
+  data: string[][]
 }
