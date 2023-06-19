@@ -1,7 +1,7 @@
 # I think you need to give this globally unique name
 name = "itl-bot-give-me-a-name"
 main = "src/index.ts"
-compatibility_date = "2023-04-09"
+compatibility_date = "2023-05-18"
 
 # You can create multiple different envs if needed by copying the following lines
 # and renaming dev to something else
@@ -14,16 +14,14 @@ kv_namespaces = [
 triggers = {crons = [ "0 18 * * *" ]}
 
 [env.dev.vars]
-# Add your players here, case insensitive
-players = [
-    "list",
-    "your",
-    "players",
-    "here"
-  ]
 # You can create api key so the webhook can be triggered on demand
 # Leave empty for no on-demand triggering
 apiKey = ''
 # Paste your webhook url here
 webhook = 'https://discord.com/api/webhooks/channel_id/secret_key'
-
+# You can customize your emoji here
+customEmoji = { up = '<:green_triangle:342423>' }
+# Choose which regions you're interested in
+regions = ['japan', 'finland']
+# You can ignore specific players
+ignorePlayers = ['NaviTheFairy']
