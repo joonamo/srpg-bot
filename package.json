@@ -2,17 +2,16 @@
   "name": "itl-bot",
   "version": "0.0.0",
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20230404.0",
-    "@types/ramda": "^0.28.23",
-    "typescript": "5.0.4",
-    "wrangler": "2.14.0"
+    "@cloudflare/workers-types": "4.20230518.0",
+    "@types/ramda": "^0.29.2",
+    "typescript": "5.1.3",
+    "wrangler": "3.1.0"
   },
   "scripts": {
     "start": "wrangler dev --env dev",
     "deploy-dev": "wrangler publish --env dev",
-    "deploy-prod": "wrangler publish --env production",
-    "deploy-nordic-cup": "wrangler publish --env nordiccup",
-    "deploy-all": "wrangler publish --env dev && wrangler publish --env production && wrangler publish --env nordiccup"
+    "deploy-prod": "wrangler publish --env prod",
+    "deploy-all": "wrangler publish --env dev && wrangler publish --env prod"
   },
   "dependencies": {
     "ramda": "0.29.0"

@@ -1,5 +1,5 @@
-# itl-bot
-Bot for posting [ITL 2023 Online](https://itl2023.groovestats.com/) scores to Discord via webhook
+# srpg-bot
+Bot for posting [Stamina RPG VII](https://srpg7.groovestats.com) scores to Discord via webhook. Based on my previous [ITL bot](https://github.com/joonamo/itl-bot).
 
 ![Preview image](preview.png)
 
