@@ -90,7 +90,7 @@ const doIt = async (env: Env) => {
   console.log('Sending title...')
   const webhookResult = await fetch(env.webhook, {
     method: 'POST',
-    body: JSON.stringify({ content: env.messageTitle ?? '🛡️ SRPG VII scores ⚔️' }),
+    body: JSON.stringify({ content: env.messageTitle ?? '🛡️ SRPG VII scores (TP+LP) ⚔️' }),
     headers: { 'content-type': 'application/json;charset=UTF-8' },
   })
   console.log(`Webhook call succesful: ${webhookResult.ok}, status: ${webhookResult.status}`)
